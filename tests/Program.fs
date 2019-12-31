@@ -3,55 +3,56 @@
 open Expecto
 open Alternative
 
-module Expect' =
-    let isNone actual =
-        Expect.isNone actual ""
-
-    let equal expected actual =
-        Expect.equal actual expected ""
-
 [<EntryPoint>]
 let main argv =
     let tests =
         testList "Unit tests" [
             testList "Option" [
                 testList "requireAny" [
-                    test "All nones" {
-                        seq {
-                            None
-                            None
-                        }
-                        |> Option.requireAny
-                        |> Expect'.isNone                
+                    test "All Nones" {
+                        let result =
+                            seq {
+                                None
+                                None
+                            }
+                            |> Option.requireAny
+
+                        Expect.isNone result "Expected None"          
                     }
 
                     test "Single Some" {
-                        seq {
-                            None
-                            Some 1
-                        }
-                        |> Option.requireAny
-                        |> Expect'.equal (Some 1)                
+                        let result =
+                            seq {
+                                None
+                                Some 1
+                            }
+                            |> Option.requireAny
+
+                        Expect.equal result (Some 1) "Expected to pass over the None and take the Some"    
                     }
 
-                    test "Multiple Some, takes first" {
+                    test "Multiple Somes" {
                         let result =
                             seq {
                                 Some 1
                                 Some 2
                             }
                             |> Option.requireAny
-                        Expect.equal result (Some 1) "Expected first Some"                
+
+                        Expect.equal result (Some 1) "Expected to take the first Some"                
                     }
 
-                    test "Evaluates lazily" {
+                    test "Lazy evaluation" {
                         let mutable evaluatedEagerly = false
+                        
                         let result =
                             seq {
                                 Some 1
                                 evaluatedEagerly <- true
                             }
                             |> Option.requireAny
+
+                        Expect.equal result (Some 1) "Expected Some 1"
                         Expect.isFalse evaluatedEagerly "Expected to stop evaluating after seeing a Some"                
                     }
 
@@ -61,95 +62,121 @@ let main argv =
                         Expect.isNone result "Expected None for an empty list"                
                     }      
                 ]
-
-                testList "requireAll" [
-                    test "All nones" {
-                        let result =
+            ]    
+        
+            testList "AsyncResult" [
+                testList "requireAny" [            
+                    testAsync "All Errors" {
+                        let! result =
                             seq {
-                                None
+                                async { return Error "message 1" }
+                                async { return Error "message 2" }
                             }
-                            |> Option.requireAll
-                        Expect.isNone result "Expected None"                
+                            |> AsyncResult.requireAny "default"
+                            
+                        Expect.equal result (Error "message 1") "Expected to take the first Error"
                     }
 
-                    test "None and Some" {
-                        let result =
+                    testAsync "Single Ok" {
+                        let! result =
                             seq {
-                                None
-                                Some 1
+                                async { return Error "message" }
+                                async { return Ok () }
                             }
-                            |> Option.requireAll
-                        Expect.isNone result "Expected None"                
+                            |> AsyncResult.requireAny "default"
+                            
+                        Expect.equal result (Ok ()) "Expected to skip over the Error and take the Ok"
                     }
 
-                    test "Multiple Some, takes first" {
-                        let result =
+                    testAsync "Multiple Ok" {
+                        let! result =
                             seq {
-                                Some 1
-                                Some 2
+                                async { return Ok 1 }
+                                async { return Ok 2 }
                             }
-                            |> Option.requireAll
-                        Expect.equal result (Some 1) "Expected first Some"                
+                            |> AsyncResult.requireAny "default"
+                            
+                        Expect.equal result (Ok 1) "Expected to take the first Ok"
                     }
 
-                    test "Evaluates lazily" {
+                    testAsync "Lazy evaluation" {
                         let mutable evaluatedEagerly = false
-                        let result =
+                        
+                        let! result =
                             seq {
-                                None
+                                async { return Ok () }
                                 evaluatedEagerly <- true
                             }
-                            |> Option.requireAll
-                        Expect.isFalse evaluatedEagerly "Expected to stop evaluating after seeing a None"                
+                            |> AsyncResult.requireAny "error"
+                        
+                        Expect.equal result (Ok ()) "Expected Ok ()"
+                        Expect.isFalse evaluatedEagerly "Expected to stop evaluating after seeing an Ok"                
+                    }
+
+                    testAsync "Empty list" {
+                        let! result = [ ] |> AsyncResult.requireAny "default"
+                        
+                        Expect.equal result (Error "default") "Expected default Error for an empty list"
+                    }
+                ]
+            ]
+
+            testList "Result" [
+                testList "requireAny" [            
+                    test "All errors" {
+                        let result =
+                            seq {
+                                Error "message 1"
+                                Error "message 2"
+                            }
+                            |> Result.requireAny "default"
+                            
+                        Expect.equal result (Error "message 1") "Expected to take the first Error"
+                    }
+
+                    test "Single Ok" {
+                        let result =
+                            seq {
+                                Error "message"
+                                Ok ()
+                            }
+                            |> Result.requireAny "default"
+                            
+                        Expect.equal result (Ok ()) "Expected to skip over the Error and take the Ok"
+                    }
+
+                    test "Multiple Ok" {
+                        let result =
+                            seq {
+                                Ok 1
+                                Ok 2
+                            }
+                            |> Result.requireAny "default"
+                            
+                        Expect.equal result (Ok 1) "Expected to take the first Ok"
+                    }
+
+                    test "Lazy evaluation" {
+                        let mutable evaluatedEagerly = false
+                        
+                        let result =
+                            seq {
+                                Ok ()
+                                evaluatedEagerly <- true
+                            }
+                            |> Result.requireAny "error"
+                        
+                        Expect.equal result (Ok ()) "Expected Ok ()"
+                        Expect.isFalse evaluatedEagerly "Expected to stop evaluating after seeing an Ok"                
                     }
 
                     test "Empty list" {
-                        let result = [ ] |> Option.requireAll
+                        let result = [ ] |> Result.requireAny "default"
                         
-                        Expect.isNone result "Expected None for an empty list"                
-                    }      
+                        Expect.equal result (Error "default") "Expected default Error for an empty list"
+                    }
                 ]
             ]
-        
-            testList "AsyncResult" [
-                testAsync "requireAny" {
-                    let! result =
-                        seq {
-                            async { return Error "message" }
-                        }
-                        |> AsyncResult.requireAny "default"
-                        
-                    Expect.equal result (Error "message") ""
-                }
-
-                testAsync "requireAny2" {
-                    let! result =
-                        seq {
-                            async { return Error "message" }
-                            async { return Ok () }
-                        }
-                        |> AsyncResult.requireAny "default"
-                        
-                    Expect.equal result (Ok ()) ""
-                }
-                
-                testAsync "requireAll" {
-                    let! result =
-                        seq {
-                            async { return Ok () }
-                            async { return Error "message" }
-                        }
-                        |> AsyncResult.requireAll "default"
-
-                    Expect.equal result (Error "message") ""
-                }
-            ]
-        ]        
-
-    //let tests =
-        // match argv with
-        // | [| "--unit" |] -> unitTests
-        // | [| "--integration" |] -> integrationTests
-        // | _ -> testList "all tests" [unitTests; integrationTests]
+        ]
     
     runTests defaultConfig tests
