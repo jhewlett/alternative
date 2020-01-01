@@ -1,16 +1,9 @@
 ﻿namespace Alternative
 
 //todo: why do the requires take a default error. Just use the first one? (assum seq is non-empty or only use if seq is empty)
+//todo: what about asyncoption?
 
 module Result =
-    let isOk = function
-        | Ok _ -> true
-        | _ -> false
-
-    let isError = function
-        | Error _ -> true
-        | _ -> false
-
     let requireAny error (results : Result<'a, 'b> seq) =
         let mutable okResult = None
         let mutable firstError = None
