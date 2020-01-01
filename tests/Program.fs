@@ -62,6 +62,12 @@ let main argv =
                         Expect.isNone result "Expected None for an empty list"                
                     }      
                 ]
+            
+                testList "<|>" [
+                    testProperty "Behaves the same as requireAny" (fun (a: Option<int>) (b : Option<int>) ->
+                        Option.(<|>) a b = Option.requireAny [ a; b ]
+                    )
+                ]
             ]    
         
             testList "AsyncResult" [
@@ -119,6 +125,27 @@ let main argv =
                         Expect.equal result (Error "default") "Expected default Error for an empty list"
                     }
                 ]
+            
+                testList "<|>" [
+                    testProperty "Behaves the same as requireAny" (fun (a: Result<string, string>) (b : Result<string, string>) ->
+                        async {
+                            let! expected =
+                                [
+                                    async { return a }
+                                    async { return b }
+                                ]
+                                |> AsyncResult.requireAny "error"
+
+                            let! actual =
+                                AsyncResult.(<|>)
+                                    (async { return a })
+                                    (async { return b })
+
+                            return actual = expected
+                        }
+                        |> Async.RunSynchronously
+                    )
+                ]
             ]
 
             testList "Result" [
@@ -175,6 +202,15 @@ let main argv =
                         
                         Expect.equal result (Error "default") "Expected default Error for an empty list"
                     }
+                ]
+            
+                testList "<|>" [
+                    testProperty "Behaves the same as requireAny" (fun (a: Result<string, string>) (b : Result<string, string>) ->
+                        let expected = [ a; b ] |> Result.requireAny "error"
+                        let actual = Result.(<|>) a b
+
+                        actual = expected
+                    )
                 ]
             ]
         ]
