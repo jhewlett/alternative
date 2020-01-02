@@ -1,8 +1,8 @@
 # Alternative
 
-Inspired by the `Alternative` type class from Haskell/Category theory
-
 Finds the first `Some` in a set of `Option<'a>`, or `None` if they're all `None`.
+
+Inspired by the `Alternative` type class from Haskell/Category theory.
 
 ## Usage
 ```fsharp
