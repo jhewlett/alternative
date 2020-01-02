@@ -8,14 +8,14 @@ let main argv =
     let tests =
         testList "Unit tests" [
             testList "Option" [
-                testList "requireAny" [
+                testList "takeFirstSome" [
                     test "All Nones" {
                         let result =
                             seq {
                                 None
                                 None
                             }
-                            |> Option.requireAny
+                            |> Option.takeFirstSome
 
                         Expect.isNone result "Expected None"          
                     }
@@ -26,7 +26,7 @@ let main argv =
                                 None
                                 Some 1
                             }
-                            |> Option.requireAny
+                            |> Option.takeFirstSome
 
                         Expect.equal result (Some 1) "Expected to pass over the None and take the Some"    
                     }
@@ -37,7 +37,7 @@ let main argv =
                                 Some 1
                                 Some 2
                             }
-                            |> Option.requireAny
+                            |> Option.takeFirstSome
 
                         Expect.equal result (Some 1) "Expected to take the first Some"                
                     }
@@ -50,35 +50,35 @@ let main argv =
                                 Some 1
                                 evaluatedEagerly <- true
                             }
-                            |> Option.requireAny
+                            |> Option.takeFirstSome
 
                         Expect.equal result (Some 1) "Expected Some 1"
                         Expect.isFalse evaluatedEagerly "Expected to stop evaluating after seeing a Some"                
                     }
 
                     test "Empty list" {
-                        let result = [ ] |> Option.requireAny
+                        let result = [ ] |> Option.takeFirstSome
                         
                         Expect.isNone result "Expected None for an empty list"                
                     }      
                 ]
             
                 testList "<|>" [
-                    testProperty "Behaves the same as requireAny" (fun (a: Option<int>) (b : Option<int>) ->
-                        Option.(<|>) a b = Option.requireAny [ a; b ]
+                    testProperty "Behaves the same as takeFirstSome" (fun (a: Option<int>) (b : Option<int>) ->
+                        Option.(<|>) a b = Option.takeFirstSome [ a; b ]
                     )
                 ]
             ]    
         
             testList "AsyncResult" [
-                testList "requireAny" [            
+                testList "takeFirstOk" [            
                     testAsync "All Errors" {
                         let! result =
                             seq {
                                 async { return Error "message 1" }
                                 async { return Error "message 2" }
                             }
-                            |> AsyncResult.requireAny "default"
+                            |> AsyncResult.takeFirstOk "default"
                             
                         Expect.equal result (Error "message 1") "Expected to take the first Error"
                     }
@@ -89,7 +89,7 @@ let main argv =
                                 async { return Error "message" }
                                 async { return Ok () }
                             }
-                            |> AsyncResult.requireAny "default"
+                            |> AsyncResult.takeFirstOk "default"
                             
                         Expect.equal result (Ok ()) "Expected to skip over the Error and take the Ok"
                     }
@@ -100,7 +100,7 @@ let main argv =
                                 async { return Ok 1 }
                                 async { return Ok 2 }
                             }
-                            |> AsyncResult.requireAny "default"
+                            |> AsyncResult.takeFirstOk "default"
                             
                         Expect.equal result (Ok 1) "Expected to take the first Ok"
                     }
@@ -113,14 +113,14 @@ let main argv =
                                 async { return Ok () }
                                 evaluatedEagerly <- true
                             }
-                            |> AsyncResult.requireAny "error"
+                            |> AsyncResult.takeFirstOk "error"
                         
                         Expect.equal result (Ok ()) "Expected Ok ()"
                         Expect.isFalse evaluatedEagerly "Expected to stop evaluating after seeing an Ok"                
                     }
 
                     testAsync "Empty list" {
-                        let! result = [ ] |> AsyncResult.requireAny "default"
+                        let! result = [ ] |> AsyncResult.takeFirstOk "default"
                         
                         Expect.equal result (Error "default") "Expected default Error for an empty list"
                     }
@@ -134,7 +134,7 @@ let main argv =
                                     async { return a }
                                     async { return b }
                                 ]
-                                |> AsyncResult.requireAny "error"
+                                |> AsyncResult.takeFirstOk "error"
 
                             let! actual =
                                 AsyncResult.(<|>)
@@ -149,14 +149,14 @@ let main argv =
             ]
 
             testList "Result" [
-                testList "requireAny" [            
+                testList "takeFirstOk" [            
                     test "All errors" {
                         let result =
                             seq {
                                 Error "message 1"
                                 Error "message 2"
                             }
-                            |> Result.requireAny "default"
+                            |> Result.takeFirstOk "default"
                             
                         Expect.equal result (Error "message 1") "Expected to take the first Error"
                     }
@@ -167,7 +167,7 @@ let main argv =
                                 Error "message"
                                 Ok ()
                             }
-                            |> Result.requireAny "default"
+                            |> Result.takeFirstOk "default"
                             
                         Expect.equal result (Ok ()) "Expected to skip over the Error and take the Ok"
                     }
@@ -178,7 +178,7 @@ let main argv =
                                 Ok 1
                                 Ok 2
                             }
-                            |> Result.requireAny "default"
+                            |> Result.takeFirstOk "default"
                             
                         Expect.equal result (Ok 1) "Expected to take the first Ok"
                     }
@@ -191,14 +191,14 @@ let main argv =
                                 Ok ()
                                 evaluatedEagerly <- true
                             }
-                            |> Result.requireAny "error"
+                            |> Result.takeFirstOk "error"
                         
                         Expect.equal result (Ok ()) "Expected Ok ()"
                         Expect.isFalse evaluatedEagerly "Expected to stop evaluating after seeing an Ok"                
                     }
 
                     test "Empty list" {
-                        let result = [ ] |> Result.requireAny "default"
+                        let result = [ ] |> Result.takeFirstOk "default"
                         
                         Expect.equal result (Error "default") "Expected default Error for an empty list"
                     }
@@ -206,7 +206,7 @@ let main argv =
             
                 testList "<|>" [
                     testProperty "Behaves the same as requireAny" (fun (a: Result<string, string>) (b : Result<string, string>) ->
-                        let expected = [ a; b ] |> Result.requireAny "error"
+                        let expected = [ a; b ] |> Result.takeFirstOk "error"
                         let actual = Result.(<|>) a b
 
                         actual = expected
@@ -216,3 +216,4 @@ let main argv =
         ]
     
     runTests defaultConfig tests
+    

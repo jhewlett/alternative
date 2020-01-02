@@ -1,10 +1,18 @@
 ﻿namespace Alternative
 
-//todo: why do the requires take a default error. Just use the first one? (assum seq is non-empty or only use if seq is empty)
-//todo: what about asyncoption?
+module Option =
+    let takeFirstSome options =
+        options
+        |> Seq.tryFind Option.isSome
+        |> Option.defaultValue None
+    
+    let (<|>) a b =
+        match a with
+        | Some _ -> a
+        | _ -> b
 
 module Result =
-    let requireAny error (results : Result<'a, 'b> seq) =
+    let takeFirstOk error (results : Result<'a, 'b> seq) =
         let mutable okResult = None
         let mutable firstError = None
 
@@ -32,7 +40,7 @@ module Result =
             | _ -> a
 
 module AsyncResult =
-    let requireAny error (results : Async<Result<'a, 'b>> seq) =        
+    let takeFirstOk error (results : Async<Result<'a, 'b>> seq) =        
         async {
             let mutable okResult = None
             let mutable firstError = None
@@ -64,14 +72,3 @@ module AsyncResult =
                 | Ok _ -> return! b
                 | _ -> return! a
         }
-
-module Option =
-    let requireAny options =
-        options
-        |> Seq.tryFind Option.isSome
-        |> Option.defaultValue None
-    
-    let (<|>) a b =
-        match a with
-        | Some _ -> a
-        | _ -> b
