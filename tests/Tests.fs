@@ -127,7 +127,7 @@ let main argv =
                 ]
             
                 testList "<|>" [
-                    testProperty "Behaves the same as requireAny" (fun (a: Result<string, string>) (b : Result<string, string>) ->
+                    testProperty "Behaves the same as takeFirstOk" (fun (a: Result<string, string>) (b : Result<string, string>) ->
                         async {
                             let! expected =
                                 [
@@ -205,7 +205,7 @@ let main argv =
                 ]
             
                 testList "<|>" [
-                    testProperty "Behaves the same as requireAny" (fun (a: Result<string, string>) (b : Result<string, string>) ->
+                    testProperty "Behaves the same as takeFirstOk" (fun (a: Result<string, string>) (b : Result<string, string>) ->
                         let expected = [ a; b ] |> Result.takeFirstOk "error"
                         let actual = Result.(<|>) a b
 
