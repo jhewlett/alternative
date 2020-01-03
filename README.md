@@ -47,9 +47,6 @@ seq {
 If you want to run your `Async`s in parallel, then just use `Async.Parallel` like this:
 
 ```fsharp
-module Async =
-    let map f x = async { let! x' = x in return f x' }
-
 let fetchFromCache () = async { return Ok 1 }
 let fetchFromDb () = async { return Ok 1 }
 
