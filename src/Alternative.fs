@@ -12,23 +12,16 @@ module Option =
         | _ -> b
 
 module Result =
-    let takeFirstOk error (results : Result<'a, 'b> seq) =
-        let mutable okResult = None
-        let mutable firstError = None
+    let isOk = function
+        | Ok _ -> true
+        | _ -> false
 
-        use e = results.GetEnumerator()
-
-        while (Option.isNone okResult && e.MoveNext()) do
-            match e.Current with
-            | Ok _ -> okResult <- Some e.Current
-            | Error _ ->
-                if Option.isNone firstError then
-                    firstError <- Some e.Current
-
-        match okResult with
-        | Some ok -> ok
+    let takeFirstOk error results =
+        match results |> Seq.tryFind isOk with
+        | Some r -> r
         | None ->
-            firstError
+            results
+            |> Seq.tryHead
             |> Option.defaultValue (Error error)
 
     let (<|>) a b =
@@ -39,29 +32,26 @@ module Result =
             | Ok _ -> b
             | _ -> a
 
-module AsyncResult =
-    let takeFirstOk error (results : Async<Result<'a, 'b>> seq) =        
+module Async =
+    let map f a =
         async {
-            let mutable okResult = None
-            let mutable firstError = None
-
-            use e = results.GetEnumerator()
-
-            while (Option.isNone okResult && e.MoveNext()) do
-                let! current = e.Current
-                match current with
-                | Ok _ -> okResult <- Some current
-                | Error _ ->
-                    if Option.isNone firstError then
-                        firstError <- Some current
-
-            match okResult with
-            | Some ok -> return ok
-            | None ->
-                return
-                    firstError
-                    |> Option.defaultValue (Error error)
+            let! a' = a
+            return f a'
         }
+
+    let sequence (t : Async<'a> seq) : Async<'a seq> =
+        async {
+            let! ct = Async.CancellationToken
+            return seq {
+                use enum = t.GetEnumerator ()
+                while enum.MoveNext () do
+                    yield Async.RunSynchronously (enum.Current, cancellationToken = ct)
+            }
+        }
+
+module AsyncResult =
+    let takeFirstOk error =
+        Async.sequence >> Async.map (Result.takeFirstOk error)
 
     let (<|>) a b =
         async {
